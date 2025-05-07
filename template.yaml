@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless RDS Automation - SAM Template
+
+Globals:
+  Function:
+    Timeout: 10
+    Runtime: python3.11
+
+Resources:
+
+  CreateRDSRequestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/
+      Handler: create_pr.handler
+      Events:
+        ApiTrigger:
+          Type: Api
+          Properties:
+            Path: /rds-request
+            Method: POST
+      Environment:
+        Variables:
+          QUEUE_URL: !Ref RDSRequestQueue
+      Policies:
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt RDSRequestQueue.QueueName
+
+  RDSRequestQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: rds-request-queue
+
+Outputs:
+
+  ApiUrl:
+    Description: "API Gateway endpoint"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/rds-request"
+
+  RDSQueueURL:
+    Description: "URL of the request queue"
+    Value: !Ref RDSRequestQueue
