@@ -1,0 +1,30 @@
+version: 2.1
+
+executors:
+  terraform-executor:
+    docker:
+      - image: hashicorp/terraform:1.6.6
+    working_directory: ~/project
+
+jobs:
+  deploy:
+    executor: terraform-executor
+    steps:
+      - checkout
+
+      - run:
+          name: Initialize Terraform
+          command: |
+            cd terraform
+            terraform init
+
+      - run:
+          name: Apply Terraform with test-db
+          command: |
+            cd terraform
+            terraform apply -auto-approve -var="db_name=test-db"
+
+workflows:
+  deploy_workflow:
+    jobs:
+      - deploy

@@ -1,0 +1,5 @@
+
+output "rds_endpoint" {
+  description = "RDS endpoint after creation"
+  value       = aws_db_instance.rds_instance.endpoint
+}

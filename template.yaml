@@ -13,7 +13,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: lambda/
-      Handler: create_pr.handler
+      Handler: app.lambda_handler
       Events:
         ApiTrigger:
           Type: Api
@@ -22,15 +22,31 @@ Resources:
             Method: POST
       Environment:
         Variables:
-          QUEUE_URL: !Ref RDSRequestQueue
+          QUEUE_URL: !GetAtt RDSRequestQueue.QueueUrl
       Policies:
         - SQSSendMessagePolicy:
+            QueueName: !GetAtt RDSRequestQueue.QueueName
+
+  ProcessRDSRequestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/
+      Handler: consumer.lambda_handler
+      Runtime: python3.11
+      Events:
+        SQSTrigger:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt RDSRequestQueue.Arn
+      Policies:
+        - SQSPollerPolicy:
             QueueName: !GetAtt RDSRequestQueue.QueueName
 
   RDSRequestQueue:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: rds-request-queue
+
 
 Outputs:
 
