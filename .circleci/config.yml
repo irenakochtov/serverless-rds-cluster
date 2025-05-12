@@ -14,24 +14,24 @@ jobs:
 
       - run:
           name: Navigate to Terraform Directory
-          command: cd serverless_rds_cluster/terraform
+          command: cd terraform
 
       - run:
           name: Debug - Show Terraform Files
           command: |
-            cd serverless_rds_cluster/terraform
+            cd terraform
             ls -la
 
       - run:
           name: Initialize Terraform
           command: |
-            cd serverless_rds_cluster/terraform
+            cd terraform
             terraform init
 
       - run:
           name: Apply Terraform using tfvars
           command: |
-            cd serverless_rds_cluster/terraform
+            cd terraform
             terraform apply -auto-approve -var-file="terraform.tfvars"
 
 workflows:
