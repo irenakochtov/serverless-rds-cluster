@@ -13,16 +13,26 @@ jobs:
       - checkout
 
       - run:
+          name: Navigate to Terraform Directory
+          command: cd serverless_rds_cluster/terraform
+
+      - run:
+          name: Debug - Show Terraform Files
+          command: |
+            cd serverless_rds_cluster/terraform
+            ls -la
+
+      - run:
           name: Initialize Terraform
           command: |
-            cd terraform
+            cd serverless_rds_cluster/terraform
             terraform init
 
       - run:
-          name: Apply Terraform with test-db
+          name: Apply Terraform using tfvars
           command: |
-            cd terraform
-            terraform apply -auto-approve -var="db_name=test-db"
+            cd serverless_rds_cluster/terraform
+            terraform apply -auto-approve -var-file="terraform.tfvars"
 
 workflows:
   deploy_workflow:

@@ -31,22 +31,30 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: lambda/
-      Handler: consumer.lambda_handler
+      Handler: handler.lambda_handler
       Runtime: python3.11
       Events:
         SQSTrigger:
           Type: SQS
           Properties:
             Queue: !GetAtt RDSRequestQueue.Arn
+      Environment:
+        Variables:
+          GITHUB_TOKEN: "REPLACE_ME_IN_DEPLOYMENT"
+          SECRET_ARN: "arn:aws:secretsmanager:eu-north-1:110626036047:secret:rds/credentials-ktNm2s"
       Policies:
         - SQSPollerPolicy:
             QueueName: !GetAtt RDSRequestQueue.QueueName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: "arn:aws:secretsmanager:eu-north-1:110626036047:secret:rds/credentials-ktNm2s"
 
   RDSRequestQueue:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: rds-request-queue
-
 
 Outputs:
 

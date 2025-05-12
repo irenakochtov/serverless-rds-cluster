@@ -1,0 +1,128 @@
+import json
+import os
+import requests
+from datetime import datetime
+
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+REPO_OWNER = "irenakochtov"
+REPO_NAME = "serverless-rds-cluster"
+BASE_BRANCH = "main"
+
+def lambda_handler(event, context):
+    for record in event['Records']:
+        message = json.loads(record['body'])
+
+        db_name = message.get('db_name')
+        db_engine = message.get('db_engine')
+        env = message.get('env')
+
+        if not db_name or not db_engine or not env:
+            print("Missing required parameters.")
+            continue
+
+        branch_name = f"rds-{db_name}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+        file_path = f"terraform/{db_name}.tf"
+
+        tf_content = f"""
+resource "aws_db_instance" "{db_name}" {{
+  identifier           = "{db_name}"
+  allocated_storage    = 20
+  engine               = "{db_engine}"
+  instance_class       = "db.t3.micro"
+  username             = "admin"
+  password             = "SuperSecure123!"
+  skip_final_snapshot  = true
+  publicly_accessible  = true
+}}
+"""
+
+        headers = {
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github+json"
+        }
+
+        # 1. Get SHA of main branch
+        main_ref = requests.get(f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/git/ref/heads/{BASE_BRANCH}", headers=headers).json()
+        main_sha = main_ref["object"]["sha"]
+
+        # 2. Create new branch
+        requests.post(
+            f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/git/refs",
+            headers=headers,
+            json={
+                "ref": f"refs/heads/{branch_name}",
+                "sha": main_sha
+            }
+        )
+
+        # 3. Create file blob
+        blob_resp = requests.post(
+            f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/git/blobs",
+            headers=headers,
+            json={
+                "content": tf_content,
+                "encoding": "utf-8"
+            }
+        )
+        blob_sha = blob_resp.json()["sha"]
+
+        # 4. Get base tree
+        commit_data = requests.get(
+            f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/git/commits/{main_sha}",
+            headers=headers
+        ).json()
+        base_tree = commit_data["tree"]["sha"]
+
+        # 5. Create new tree
+        tree_resp = requests.post(
+            f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/git/trees",
+            headers=headers,
+            json={
+                "base_tree": base_tree,
+                "tree": [{
+                    "path": file_path,
+                    "mode": "100644",
+                    "type": "blob",
+                    "sha": blob_sha
+                }]
+            }
+        )
+        new_tree_sha = tree_resp.json()["sha"]
+
+        # 6. Create commit
+        commit_resp = requests.post(
+            f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/git/commits",
+            headers=headers,
+            json={
+                "message": f"Provision RDS: {db_name}",
+                "tree": new_tree_sha,
+                "parents": [main_sha]
+            }
+        )
+        new_commit_sha = commit_resp.json()["sha"]
+
+        # 7. Update branch ref
+        requests.patch(
+            f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/git/refs/heads/{branch_name}",
+            headers=headers,
+            json={"sha": new_commit_sha}
+        )
+
+        # 8. Open pull request
+        pr_resp = requests.post(
+            f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/pulls",
+            headers=headers,
+            json={
+                "title": f"Provision RDS for {db_name}",
+                "head": branch_name,
+                "base": BASE_BRANCH,
+                "body": f"Auto-created PR to provision RDS `{db_name}` in `{env}` environment."
+            }
+        )
+
+        print(f"PR created for {db_name} – response: {pr_resp.status_code}")
+
+    return {
+        "statusCode": 200,
+        "body": json.dumps("Done.")
+    }

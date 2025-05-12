@@ -35,7 +35,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ProcessRDSRequestFunction
-      Handler: consumer.lambda_handler
+      Handler: handler.lambda_handler
       Runtime: python3.11
       Events:
         SQSTrigger:
@@ -45,12 +45,21 @@ Resources:
               Fn::GetAtt:
               - RDSRequestQueue
               - Arn
+      Environment:
+        Variables:
+          GITHUB_TOKEN: REPLACE_ME_IN_DEPLOYMENT
       Policies:
       - SQSPollerPolicy:
           QueueName:
             Fn::GetAtt:
             - RDSRequestQueue
             - QueueName
+      - Statement:
+        - Effect: Allow
+          Action:
+          - secretsmanager:GetSecretValue
+          - ssm:GetParameter
+          Resource: '*'
     Metadata:
       SamResourceId: ProcessRDSRequestFunction
   RDSRequestQueue:
