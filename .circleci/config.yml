@@ -4,17 +4,13 @@ executors:
   terraform-executor:
     docker:
       - image: hashicorp/terraform:1.6.6
-    working_directory: ~/project
+    working_directory: ~/project/serverless_rds_cluster
 
 jobs:
   deploy:
     executor: terraform-executor
     steps:
       - checkout
-
-      - run:
-          name: Navigate to Terraform Directory
-          command: cd terraform
 
       - run:
           name: Debug - Show Terraform Files
