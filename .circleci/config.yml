@@ -4,7 +4,7 @@ executors:
   terraform-executor:
     docker:
       - image: hashicorp/terraform:1.6.6
-    working_directory: ~/project
+    working_directory: ~/project/serverless_rds_cluster
 
 jobs:
   deploy:
@@ -13,25 +13,21 @@ jobs:
       - checkout
 
       - run:
-          name: Navigate to Terraform Directory
-          command: cd serverless_rds_cluster/terraform
-
-      - run:
           name: Debug - Show Terraform Files
           command: |
-            cd serverless_rds_cluster/terraform
+            cd terraform
             ls -la
 
       - run:
           name: Initialize Terraform
           command: |
-            cd serverless_rds_cluster/terraform
+            cd terraform
             terraform init
 
       - run:
           name: Apply Terraform using tfvars
           command: |
-            cd serverless_rds_cluster/terraform
+            cd terraform
             terraform apply -auto-approve -var-file="terraform.tfvars"
 
 workflows:

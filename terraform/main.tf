@@ -1,3 +1,7 @@
+provider "aws" {
+  region = "eu-north-1"  # החליפי אם את עובדת באזור אחר
+}
+
 data "aws_secretsmanager_secret_version" "rds_credentials" {
   secret_id = "rds/credentials"
 }
@@ -14,8 +18,6 @@ resource "aws_db_instance" "this" {
   skip_final_snapshot     = true
   publicly_accessible     = false
   db_name                 = var.db_name
-
-  # 🔐 נמשוך את המשתמש והסיסמה מתוך הסיקרט
   username                = local.rds_creds.username
   password                = local.rds_creds.password
 }
